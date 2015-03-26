@@ -16,11 +16,6 @@ Pre-requisites
 - Android Build Tools v21.1.1
 - Android Support Repository
 
-Screenshots
--------------
-
-<img src="screenshots/1-launch.png" height="400" alt="Screenshot"/> <img src="screenshots/2-record.png" height="400" alt="Screenshot"/> <img src="screenshots/3-save.png" height="400" alt="Screenshot"/> 
-
 Getting Started
 ---------------
 
