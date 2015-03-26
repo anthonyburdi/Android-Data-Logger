@@ -58,6 +58,8 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
 import java.io.File;
@@ -70,7 +72,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class Camera2VideoFragment extends Fragment implements View.OnClickListener, SensorEventListener,
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
+        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
@@ -173,6 +175,23 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
      */
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
+
+    // TODO Should these objects be protected?
+    // Added for accelerometer data display
+    Sensor accelerometer;
+    SensorManager mSensorManager;
+    TextView acceleration;
+
+    // Added for location data display
+    TextView locationText;
+    GoogleApiClient mGoogleApiClient;
+    Location mCurrentLocation;
+    LocationRequest mLocationRequest; // periodic updates
+    /**
+     * Represents a geographical location.
+     */
+    protected Location mLastLocation;
+
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its status.
      */
@@ -269,30 +288,16 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         return inflater.inflate(R.layout.fragment_camera2_video, container, false);
     }
 
-    // TODO Move this to an appropriate place
-    // Added for accelerometer data display
-    Sensor accelerometer;
-    SensorManager mSensorManager;
-    TextView acceleration;
 
-    // Added for location data display
-    TextView location;
-    GoogleApiClient mGoogleApiClient;
-    /**
-     * Represents a geographical location.
-     */
-    protected Location mLastLocation;
+    // Added for location updates
+    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
+    public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2;
 
-    // TODO Test this code
-    // TODO Finish this code
-    // TODO FIX THIS CODE
-    // Added for GPS data capture and display
-    protected synchronized void buildGoogleApiClient() {
-        mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
+    protected void createLocationRequest() {
+        mLocationRequest = new LocationRequest();
+        mLocationRequest.setInterval(UPDATE_INTERVAL_IN_MILLISECONDS);
+        mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
 
     @Override
@@ -302,8 +307,6 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         mButtonVideo.setOnClickListener(this);
         view.findViewById(R.id.info).setOnClickListener(this);
 
-        // TODO Test this code
-        // TODO Finish this code
         // Added for accelerometer data capture and display
         mSensorManager = (SensorManager) getActivity().getSystemService(Context.SENSOR_SERVICE);
         accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -312,9 +315,19 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         acceleration = (TextView) getActivity().findViewById(R.id.acceleration);
 
         // Added for GPS data capture and display
-        location = (TextView) getActivity().findViewById(R.id.location);
+        locationText = (TextView) getActivity().findViewById(R.id.location);
         buildGoogleApiClient();
 
+    }
+
+    // Added for GPS data capture and display
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
+        createLocationRequest();
     }
 
     @Override
@@ -601,10 +614,10 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
     // Added for accelerometer data display
     @Override
     public void onSensorChanged(SensorEvent event) {
-        // TODO Add events here
         acceleration.setText("X: "+event.values[0]+
         "\nY: "+event.values[1]+
         "\nZ: "+event.values[2]);
+        // TODO Write events to a file
     }
     // Added for accelerometer data display
     @Override
@@ -617,12 +630,18 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
     public void onConnected(Bundle bundle) {
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (mLastLocation != null) {
-            location.setText("Lat: "+String.valueOf(mLastLocation.getLatitude())+
-            "\nLong: "+String.valueOf(mLastLocation.getLongitude()));
+            locationText.setText("Lat: " + String.valueOf(mLastLocation.getLatitude()) +
+                    "\nLong: " + String.valueOf(mLastLocation.getLongitude()));
+            mCurrentLocation = mLastLocation;
+            startLocationUpdates();
         } else {
             Toast.makeText(getActivity(),"No location detected, check your GPS.", Toast.LENGTH_LONG).show();
         }
+    }
 
+    protected void startLocationUpdates() {
+        LocationServices.FusedLocationApi.requestLocationUpdates(
+                mGoogleApiClient, mLocationRequest, this);
     }
 
     @Override
@@ -654,8 +673,15 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         }
     }
 
+    @Override
+    public void onLocationChanged(Location location) {
+        mCurrentLocation = location;
+        locationText.setText("Lat: "+String.valueOf(location.getLatitude())+
+                "\nLong: "+String.valueOf(location.getLongitude()));
+    }
 
-/**
+
+    /**
      * Compares two {@code Size}s based on their areas.
      */
     static class CompareSizesByArea implements Comparator<Size> {
