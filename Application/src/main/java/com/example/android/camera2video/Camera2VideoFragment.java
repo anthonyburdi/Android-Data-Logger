@@ -62,7 +62,9 @@ import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -191,6 +193,9 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
      * Represents a geographical location.
      */
     protected Location mLastLocation;
+
+    // Added for logging data
+    protected Boolean mWritingEnabled;
 
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its status.
@@ -353,13 +358,23 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         switch (view.getId()) {
             case R.id.video: {
                 if (mIsRecordingVideo) {
-                    stopRecordingVideo();
-                    Toast.makeText(getActivity(),"Recording Stopped",Toast.LENGTH_LONG);
+                    Log.d(TAG, "TEST This should log when you push the STOP button");
+                    Toast.makeText(getActivity(),"Recording Stopped",Toast.LENGTH_LONG).show();
                     // TODO Add STOP write to file for the accel and location
+                    mWritingEnabled = Boolean.FALSE;
+                    if (!mWritingEnabled) {
+                        Toast.makeText(getActivity(),"Writing Disabled, Closing File", Toast.LENGTH_LONG).show();
+                    }
+                    stopRecordingVideo();
                 } else {
-                    startRecordingVideo();
-                    Toast.makeText(getActivity(),"Recording Started",Toast.LENGTH_LONG);
+                    Log.d(TAG, "TEST This should log when you push the START button");
+                    Toast.makeText(getActivity(),"Recording Started",Toast.LENGTH_LONG).show();
                     // TODO Add write to file for the accel and location
+                    mWritingEnabled = Boolean.TRUE;
+                    if (mWritingEnabled) {
+                        Toast.makeText(getActivity(),"Writing Enabled, Logging to File", Toast.LENGTH_LONG).show();
+                    }
+                    startRecordingVideo();
                 }
                 break;
             }
@@ -618,6 +633,7 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         "\nY: "+event.values[1]+
         "\nZ: "+event.values[2]);
         // TODO Write events to a file
+        appendAccelerationToFile(event);
     }
     // Added for accelerometer data display
     @Override
@@ -625,7 +641,6 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
 
     }
 
-    // TODO Implement onConnected and onConnectionSuspended
     @Override
     public void onConnected(Bundle bundle) {
         mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
@@ -633,6 +648,8 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
             locationText.setText("Lat: " + String.valueOf(mLastLocation.getLatitude()) +
                     "\nLong: " + String.valueOf(mLastLocation.getLongitude()));
             mCurrentLocation = mLastLocation;
+            // TODO Implement location write to file
+            appendLocationToFile(mCurrentLocation);
             startLocationUpdates();
         } else {
             Toast.makeText(getActivity(),"No location detected, check your GPS.", Toast.LENGTH_LONG).show();
@@ -652,7 +669,6 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         mGoogleApiClient.connect();
     }
 
-    // TODO Implement method
     @Override
     public void onConnectionFailed(ConnectionResult result) {
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
@@ -675,10 +691,68 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
 
     @Override
     public void onLocationChanged(Location location) {
-        mCurrentLocation = location;
+        mCurrentLocation = location;  // TODO is this required?
         locationText.setText("Lat: "+String.valueOf(location.getLatitude())+
                 "\nLong: "+String.valueOf(location.getLongitude()));
+        // TODO Implement location write to file
+        appendLocationToFile(location);
     }
+
+//    // To write location to a file
+//    // TODO Implement this
+////    FileOutputStream locationOutputStream;
+//    private File getLocationFile(Context context) {
+//        return new File(context.getExternalFilesDir(null), "location.txt");
+//    }
+
+
+    // Using a pattern similar to http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
+    private void appendLocationToFile(Location location) {
+        File location_file = new File(getActivity().getExternalFilesDir(null), "location.txt");
+        if (!location_file.exists()) {
+            try {
+                location_file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            //BufferedWriter for performance, true to set append to file flag
+            BufferedWriter buf = new BufferedWriter(new FileWriter(location_file, true));
+            buf.append("Time:" + String.valueOf(System.currentTimeMillis()) + "Lat: " + String.valueOf(location.getLatitude()) +
+                    ", Long: " + String.valueOf(location.getLongitude()));
+            buf.newLine();
+            buf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        Log.d(TAG,"\nFile written to " + location_file);
+    }
+
+    // Using a pattern similar to http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
+    private void appendAccelerationToFile(SensorEvent event) {
+        File accel_file = new File(getActivity().getExternalFilesDir(null), "acceleration.txt");
+        if (!accel_file.exists()) {
+            try {
+                accel_file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        try {
+            //BufferedWriter for performance, true to set append to file flag
+            BufferedWriter buf = new BufferedWriter(new FileWriter(accel_file, true));
+            buf.append("Time:" + String.valueOf(System.currentTimeMillis()) + "X: "+event.values[0]+
+                    " Y: "+event.values[1]+" Z: "+event.values[2]);
+            buf.newLine();
+            buf.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//        Log.d(TAG,"\nFile written to " + accel_file);
+    }
+
+
 
 
     /**
