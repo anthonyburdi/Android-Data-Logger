@@ -66,19 +66,24 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 public class Camera2VideoFragment extends Fragment implements View.OnClickListener, SensorEventListener,
         GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
+
+    // ------------------- FROM ANDROID CAMERA 2 -------------------
     private static final SparseIntArray ORIENTATIONS = new SparseIntArray();
 
-    private static final String TAG = "Camera2VideoFragment";
+    private static final String TAG = "Android Data Logger";
 
     static {
         ORIENTATIONS.append(Surface.ROTATION_0, 90);
@@ -176,27 +181,34 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
      * A {@link Semaphore} to prevent the app from exiting before closing the camera.
      */
     private Semaphore mCameraOpenCloseLock = new Semaphore(1);
+    // ------------------- FROM ANDROID CAMERA 2 -------------------
 
-
-    // TODO Should these objects be protected?
+    // ------------------- ACCELEROMETER -------------------
     // Added for accelerometer data display
     Sensor accelerometer;
     SensorManager mSensorManager;
     TextView acceleration;
+    // ------------------- ACCELEROMETER -------------------
 
+    // ------------------- LOCATION -------------------
     // Added for location data display
     TextView locationText;
     GoogleApiClient mGoogleApiClient;
     Location mCurrentLocation;
     LocationRequest mLocationRequest; // periodic updates
-    /**
-     * Represents a geographical location.
-     */
     protected Location mLastLocation;
+    // ------------------- LOCATION -------------------
 
+    // ------------------- LOG DATA -------------------
     // Added for logging data
-    protected Boolean mWritingEnabled;
+    protected Boolean mWritingEnabled = Boolean.FALSE;
+    String mCurrentDateTimeString;
+    File mLocFile;
+    File mAccelFile;
+    // ------------------- LOG DATA -------------------
 
+
+    // ------------------- FROM ANDROID CAMERA 2 -------------------
     /**
      * {@link CameraDevice.StateCallback} is called when {@link CameraDevice} changes its status.
      */
@@ -292,8 +304,11 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
                              Bundle savedInstanceState) {
         return inflater.inflate(R.layout.fragment_camera2_video, container, false);
     }
+    // ------------------- FROM ANDROID CAMERA 2 -------------------
 
 
+
+    // ------------------- LOCATION -------------------
     // Added for location updates
     public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
     public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS = UPDATE_INTERVAL_IN_MILLISECONDS / 2;
@@ -304,7 +319,12 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         mLocationRequest.setFastestInterval(FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS);
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
     }
+    // ------------------- LOCATION -------------------
 
+
+    // ------------------- onViewCreated -------------------
+    // This is where all gets initialized when the view is created (not displayed so user
+    // is not impacted by delay)
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
@@ -316,7 +336,7 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         mSensorManager = (SensorManager) getActivity().getSystemService(Context.SENSOR_SERVICE);
         accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         mSensorManager.registerListener(this,accelerometer,SensorManager.SENSOR_DELAY_NORMAL);
-
+        // Display
         acceleration = (TextView) getActivity().findViewById(R.id.acceleration);
 
         // Added for GPS data capture and display
@@ -325,16 +345,7 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
 
     }
 
-    // Added for GPS data capture and display
-    protected synchronized void buildGoogleApiClient() {
-        mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
-                .addConnectionCallbacks(this)
-                .addOnConnectionFailedListener(this)
-                .addApi(LocationServices.API)
-                .build();
-        createLocationRequest();
-    }
-
+    // ------------------- FROM ANDROID CAMERA 2 -------------------
     @Override
     public void onResume() {
         super.onResume();
@@ -368,7 +379,10 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
                     stopRecordingVideo();
                 } else {
                     Log.d(TAG, "TEST This should log when you push the START button");
-                    Toast.makeText(getActivity(),"Recording Started",Toast.LENGTH_LONG).show();
+                    mCurrentDateTimeString = getCurrentDateTimeString();
+                    Log.d(TAG, "Current Date Time String " + mCurrentDateTimeString);
+                    createFiles(mCurrentDateTimeString);
+                    Toast.makeText(getActivity(),"Recording Started @ "+mCurrentDateTimeString,Toast.LENGTH_LONG).show();
                     // TODO Add write to file for the accel and location
                     mWritingEnabled = Boolean.TRUE;
                     if (mWritingEnabled) {
@@ -625,20 +639,63 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         }
         startPreview();
     }
+    /**
+     * Compares two {@code Size}s based on their areas.
+     */
+    static class CompareSizesByArea implements Comparator<Size> {
 
-    // Added for accelerometer data display
+        @Override
+        public int compare(Size lhs, Size rhs) {
+            // We cast here to ensure the multiplications won't overflow
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
+                    (long) rhs.getWidth() * rhs.getHeight());
+        }
+
+    }
+
+    public static class ErrorDialog extends DialogFragment {
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            final Activity activity = getActivity();
+            return new AlertDialog.Builder(activity)
+                    .setMessage("This device doesn't support Camera2 API.")
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            activity.finish();
+                        }
+                    })
+                    .create();
+        }
+
+    }
+    // ------------------- FROM ANDROID CAMERA 2 -------------------
+
+    // ------------------- ACCELEROMETER -------------------
     @Override
     public void onSensorChanged(SensorEvent event) {
         acceleration.setText("X: "+event.values[0]+
-        "\nY: "+event.values[1]+
-        "\nZ: "+event.values[2]);
-        // TODO Write events to a file
-        appendAccelerationToFile(event);
+                "\nY: "+event.values[1]+
+                "\nZ: "+event.values[2]);
+        if (mWritingEnabled) {
+            appendAccelerationToFile(event);
+        }
     }
-    // Added for accelerometer data display
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
+    }
+    // ------------------- ACCELEROMETER -------------------
+
+    // ------------------- LOCATION -------------------
+    protected synchronized void buildGoogleApiClient() {
+        mGoogleApiClient = new GoogleApiClient.Builder(getActivity())
+                .addConnectionCallbacks(this)
+                .addOnConnectionFailedListener(this)
+                .addApi(LocationServices.API)
+                .build();
+        createLocationRequest();
     }
 
     @Override
@@ -648,8 +705,9 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
             locationText.setText("Lat: " + String.valueOf(mLastLocation.getLatitude()) +
                     "\nLong: " + String.valueOf(mLastLocation.getLongitude()));
             mCurrentLocation = mLastLocation;
-            // TODO Implement location write to file
-            appendLocationToFile(mCurrentLocation);
+            if(mWritingEnabled) {
+                appendLocationToFile(mCurrentLocation);
+            }
             startLocationUpdates();
         } else {
             Toast.makeText(getActivity(),"No location detected, check your GPS.", Toast.LENGTH_LONG).show();
@@ -691,24 +749,56 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
 
     @Override
     public void onLocationChanged(Location location) {
-        mCurrentLocation = location;  // TODO is this required?
+        mCurrentLocation = location;
         locationText.setText("Lat: "+String.valueOf(location.getLatitude())+
                 "\nLong: "+String.valueOf(location.getLongitude()));
         // TODO Implement location write to file
-        appendLocationToFile(location);
+        if(mWritingEnabled) {
+            appendLocationToFile(location);
+        }
+    }
+    // ------------------- LOCATION -------------------
+
+    // ------------------- FILE WRITING METHODS -------------------
+    // Return current "YYMMDD--HHMMSS.sss-ZZZZ"
+    // Ex: 150402--123929.923-0400
+    private String getCurrentDateTimeString() {
+        Date currentDate = new Date();
+        String format = new String("yyMMdd--HHmmss.SSSZ");
+        SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
+        mCurrentDateTimeString = sdf.format(currentDate);
+        return mCurrentDateTimeString;
     }
 
-//    // To write location to a file
-//    // TODO Implement this
-////    FileOutputStream locationOutputStream;
-//    private File getLocationFile(Context context) {
-//        return new File(context.getExternalFilesDir(null), "location.txt");
-//    }
+    // Create directory (if req'd) and file in the following form YYMMDD/HHMMSS.sss-<type>.txt
+    // where type is locations, accelerometer or video.
+    // Also set the video file (instead of generic video.mp4 to match the format)
+    private void createFiles(String datetime) {
+        String dateString = datetime.split("--")[0];
+        String timeString = datetime.split("--")[1];
+        // Create directory
+        File dir = new File (getActivity().getExternalFilesDir(null) + "/" + dateString);
+        dir.mkdirs(); // mkdirs also creates parent directories if req'd (unlike mkdir)
+        mLocFile = new File(dir, timeString+"-locations.txt");
+        mAccelFile = new File(getActivity().getExternalFilesDir(null),
+                dateString+"/"+timeString+"-accelerometer.txt");
+        File videoFile = new File(getActivity().getExternalFilesDir(null),
+                dateString+"/"+timeString+"-video.mp4");
+        if (!mLocFile.exists() | !mAccelFile.exists()) {
+            try {
+                mLocFile.createNewFile();
+                mAccelFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        mMediaRecorder.setOutputFile(String.valueOf(videoFile));
+    }
 
-
+    //TODO Clean up variable names
     // Using a pattern similar to http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
     private void appendLocationToFile(Location location) {
-        File location_file = new File(getActivity().getExternalFilesDir(null), "location.txt");
+        File location_file = mLocFile;
         if (!location_file.exists()) {
             try {
                 location_file.createNewFile();
@@ -717,9 +807,13 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
             }
         }
         try {
+            Date currentDate = new Date();
+            String format = new String("yyMMdd--HHmmss.SSSZ");
+            SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
             //BufferedWriter for performance, true to set append to file flag
             BufferedWriter buf = new BufferedWriter(new FileWriter(location_file, true));
-            buf.append("Time:" + String.valueOf(System.currentTimeMillis()) + "Lat: " + String.valueOf(location.getLatitude()) +
+            buf.append("Time:" + sdf.format(currentDate) //String.valueOf(System.currentTimeMillis())
+                    + "Lat: " + String.valueOf(location.getLatitude()) +
                     ", Long: " + String.valueOf(location.getLongitude()));
             buf.newLine();
             buf.close();
@@ -729,9 +823,10 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
 //        Log.d(TAG,"\nFile written to " + location_file);
     }
 
+    //TODO Clean up variable names
     // Using a pattern similar to http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
     private void appendAccelerationToFile(SensorEvent event) {
-        File accel_file = new File(getActivity().getExternalFilesDir(null), "acceleration.txt");
+        File accel_file = mAccelFile;
         if (!accel_file.exists()) {
             try {
                 accel_file.createNewFile();
@@ -740,9 +835,13 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
             }
         }
         try {
+            Date currentDate = new Date();
+            String format = new String("yyMMdd--HHmmss.SSSZ");
+            SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
             //BufferedWriter for performance, true to set append to file flag
             BufferedWriter buf = new BufferedWriter(new FileWriter(accel_file, true));
-            buf.append("Time:" + String.valueOf(System.currentTimeMillis()) + "X: "+event.values[0]+
+            buf.append("Time:" + sdf.format(currentDate) //String.valueOf(System.currentTimeMillis())
+                    + "X: "+event.values[0]+
                     " Y: "+event.values[1]+" Z: "+event.values[2]);
             buf.newLine();
             buf.close();
@@ -751,40 +850,6 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         }
 //        Log.d(TAG,"\nFile written to " + accel_file);
     }
-
-
-
-
-    /**
-     * Compares two {@code Size}s based on their areas.
-     */
-    static class CompareSizesByArea implements Comparator<Size> {
-
-        @Override
-        public int compare(Size lhs, Size rhs) {
-            // We cast here to ensure the multiplications won't overflow
-            return Long.signum((long) lhs.getWidth() * lhs.getHeight() -
-                    (long) rhs.getWidth() * rhs.getHeight());
-        }
-
-    }
-
-    public static class ErrorDialog extends DialogFragment {
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            final Activity activity = getActivity();
-            return new AlertDialog.Builder(activity)
-                    .setMessage("This device doesn't support Camera2 API.")
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            activity.finish();
-                        }
-                    })
-                    .create();
-        }
-
-    }
+    // ------------------- FILE WRITING METHODS -------------------
 
 }
