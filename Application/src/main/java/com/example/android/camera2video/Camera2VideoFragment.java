@@ -323,8 +323,6 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
 
 
     // ------------------- onViewCreated -------------------
-    // This is where all gets initialized when the view is created (not displayed so user
-    // is not impacted by delay)
     @Override
     public void onViewCreated(final View view, Bundle savedInstanceState) {
         mTextureView = (AutoFitTextureView) view.findViewById(R.id.texture);
@@ -369,25 +367,16 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         switch (view.getId()) {
             case R.id.video: {
                 if (mIsRecordingVideo) {
-                    Log.d(TAG, "TEST This should log when you push the STOP button");
                     Toast.makeText(getActivity(),"Recording Stopped",Toast.LENGTH_LONG).show();
-                    // TODO Add STOP write to file for the accel and location
-                    mWritingEnabled = Boolean.FALSE;
-                    if (!mWritingEnabled) {
-                        Toast.makeText(getActivity(),"Writing Disabled, Closing File", Toast.LENGTH_LONG).show();
-                    }
+                    mWritingEnabled = Boolean.FALSE; // Stop writes in sensor update methods
                     stopRecordingVideo();
                 } else {
-                    Log.d(TAG, "TEST This should log when you push the START button");
                     mCurrentDateTimeString = getCurrentDateTimeString();
                     Log.d(TAG, "Current Date Time String " + mCurrentDateTimeString);
                     createFiles(mCurrentDateTimeString);
-                    Toast.makeText(getActivity(),"Recording Started @ "+mCurrentDateTimeString,Toast.LENGTH_LONG).show();
-                    // TODO Add write to file for the accel and location
-                    mWritingEnabled = Boolean.TRUE;
-                    if (mWritingEnabled) {
-                        Toast.makeText(getActivity(),"Writing Enabled, Logging to File", Toast.LENGTH_LONG).show();
-                    }
+                    Toast.makeText(getActivity(),"Recording Started @ "+mCurrentDateTimeString,
+                            Toast.LENGTH_LONG).show();
+                    mWritingEnabled = Boolean.TRUE; // This allows writes in sensor update methods
                     startRecordingVideo();
                 }
                 break;
@@ -795,13 +784,12 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         mMediaRecorder.setOutputFile(String.valueOf(videoFile));
     }
 
-    //TODO Clean up variable names
-    // Using a pattern similar to http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
+    // Using a pattern similar to
+    // http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
     private void appendLocationToFile(Location location) {
-        File location_file = mLocFile;
-        if (!location_file.exists()) {
+        if (!mLocFile.exists()) {
             try {
-                location_file.createNewFile();
+                mLocFile.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -811,7 +799,7 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
             String format = new String("yyMMdd--HHmmss.SSSZ");
             SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
             //BufferedWriter for performance, true to set append to file flag
-            BufferedWriter buf = new BufferedWriter(new FileWriter(location_file, true));
+            BufferedWriter buf = new BufferedWriter(new FileWriter(mLocFile, true));
             buf.append("Time:" + sdf.format(currentDate) //String.valueOf(System.currentTimeMillis())
                     + "Lat: " + String.valueOf(location.getLatitude()) +
                     ", Long: " + String.valueOf(location.getLongitude()));
@@ -820,16 +808,14 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        Log.d(TAG,"\nFile written to " + location_file);
     }
 
-    //TODO Clean up variable names
-    // Using a pattern similar to http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
+    // Using a pattern similar to
+    // http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
     private void appendAccelerationToFile(SensorEvent event) {
-        File accel_file = mAccelFile;
-        if (!accel_file.exists()) {
+        if (!mAccelFile.exists()) {
             try {
-                accel_file.createNewFile();
+                mAccelFile.createNewFile();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -839,7 +825,7 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
             String format = new String("yyMMdd--HHmmss.SSSZ");
             SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
             //BufferedWriter for performance, true to set append to file flag
-            BufferedWriter buf = new BufferedWriter(new FileWriter(accel_file, true));
+            BufferedWriter buf = new BufferedWriter(new FileWriter(mAccelFile, true));
             buf.append("Time:" + sdf.format(currentDate) //String.valueOf(System.currentTimeMillis())
                     + "X: "+event.values[0]+
                     " Y: "+event.values[1]+" Z: "+event.values[2]);
@@ -848,7 +834,6 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        Log.d(TAG,"\nFile written to " + accel_file);
     }
     // ------------------- FILE WRITING METHODS -------------------
 
