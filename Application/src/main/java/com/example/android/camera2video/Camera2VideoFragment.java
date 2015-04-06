@@ -205,6 +205,8 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
     String mCurrentDateTimeString;
     File mLocFile;
     File mAccelFile;
+    File mVideoFile;// = new File(getActivity().getExternalFilesDir(null), "videoPlaceholder.mp4");
+    File defaultVideoFile; // Will get renamed after closing the file to add timestamp
     // ------------------- LOG DATA -------------------
 
 
@@ -598,7 +600,9 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
     }
 
     private File getVideoFile(Context context) {
-        return new File(context.getExternalFilesDir(null), "video.mp4");
+        // Create default video file for use in setting up camera for preview
+        defaultVideoFile = new File(getActivity().getExternalFilesDir(null), "defaultVideo.mp4");
+        return defaultVideoFile;
     }
 
     private void startRecordingVideo() {
@@ -623,8 +627,12 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         mMediaRecorder.reset();
         Activity activity = getActivity();
         if (null != activity) {
-            Toast.makeText(activity, "Video saved: " + getVideoFile(activity),
+            Toast.makeText(activity, "Video saved: " + mVideoFile,
                     Toast.LENGTH_SHORT).show();
+        }
+        // Rename video file to add timestamp
+        if(defaultVideoFile.exists()) {
+            defaultVideoFile.renameTo(mVideoFile);
         }
         startPreview();
     }
@@ -769,10 +777,8 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         File dir = new File (getActivity().getExternalFilesDir(null) + "/" + dateString);
         dir.mkdirs(); // mkdirs also creates parent directories if req'd (unlike mkdir)
         mLocFile = new File(dir, timeString+"-locations.txt");
-        mAccelFile = new File(getActivity().getExternalFilesDir(null),
-                dateString+"/"+timeString+"-accelerometer.txt");
-        File videoFile = new File(getActivity().getExternalFilesDir(null),
-                dateString+"/"+timeString+"-video.mp4");
+        mAccelFile = new File(dir, timeString+"-accelerometer.txt");
+        mVideoFile = new File(dir,timeString+"-video.mp4");
         if (!mLocFile.exists() | !mAccelFile.exists()) {
             try {
                 mLocFile.createNewFile();
@@ -781,12 +787,12 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
                 e.printStackTrace();
             }
         }
-        mMediaRecorder.setOutputFile(String.valueOf(videoFile));
     }
 
     // Using a pattern similar to
     // http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
     private void appendLocationToFile(Location location) {
+        // Check if file was not created in createFiles(), create it
         if (!mLocFile.exists()) {
             try {
                 mLocFile.createNewFile();
@@ -800,8 +806,8 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
             SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
             //BufferedWriter for performance, true to set append to file flag
             BufferedWriter buf = new BufferedWriter(new FileWriter(mLocFile, true));
-            buf.append("Time:" + sdf.format(currentDate) //String.valueOf(System.currentTimeMillis())
-                    + "Lat: " + String.valueOf(location.getLatitude()) +
+            buf.append("Time: " + sdf.format(currentDate) //String.valueOf(System.currentTimeMillis())
+                    + ", Lat: " + String.valueOf(location.getLatitude()) +
                     ", Long: " + String.valueOf(location.getLongitude()));
             buf.newLine();
             buf.close();
@@ -813,6 +819,7 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
     // Using a pattern similar to
     // http://stackoverflow.com/questions/1756296/android-writing-logs-to-text-file
     private void appendAccelerationToFile(SensorEvent event) {
+        // Check if file was not created in createFiles(), create it
         if (!mAccelFile.exists()) {
             try {
                 mAccelFile.createNewFile();
@@ -826,9 +833,9 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
             SimpleDateFormat sdf = new SimpleDateFormat(format, Locale.US);
             //BufferedWriter for performance, true to set append to file flag
             BufferedWriter buf = new BufferedWriter(new FileWriter(mAccelFile, true));
-            buf.append("Time:" + sdf.format(currentDate) //String.valueOf(System.currentTimeMillis())
-                    + "X: "+event.values[0]+
-                    " Y: "+event.values[1]+" Z: "+event.values[2]);
+            buf.append("Time: " + sdf.format(currentDate) //String.valueOf(System.currentTimeMillis())
+                    + ", X: "+event.values[0]+
+                    ", Y: "+event.values[1]+", Z: "+event.values[2]);
             buf.newLine();
             buf.close();
         } catch (IOException e) {
