@@ -45,9 +45,10 @@
             </intent-filter>
         </activity>
 
+        <!--TODO is this req'd if not downloading?-->
         <!--Added for AWS S3 storage of files-->
         <!--<activity android:name="DownloadActivity"/>-->
-        <!--<service android:name=".network.NetworkService"-->
+        <!--<service android:name=".com.example.android.camera2video.network.NetworkService"-->
             <!--android:exported="false"/>-->
 
     </application>

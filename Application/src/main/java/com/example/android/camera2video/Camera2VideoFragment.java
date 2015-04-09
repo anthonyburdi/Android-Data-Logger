@@ -41,6 +41,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.location.Location;
 import android.media.MediaRecorder;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -56,6 +57,7 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.android.camera2video.network.TransferController;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
@@ -371,6 +373,10 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
                 if (mIsRecordingVideo) {
                     Toast.makeText(getActivity(),"Recording Stopped",Toast.LENGTH_LONG).show();
                     mWritingEnabled = Boolean.FALSE; // Stop writes in sensor update methods
+                    // ------------------- AMAZON S3 UPLOAD -------------------
+                    TransferController.upload(getActivity(), Uri.fromFile(mAccelFile));
+                    TransferController.upload(getActivity(), Uri.fromFile(mLocFile));
+                    // ------------------- AMAZON S3 UPLOAD -------------------
                     stopRecordingVideo();
                 } else {
                     mCurrentDateTimeString = getCurrentDateTimeString();
@@ -634,6 +640,9 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         if(defaultVideoFile.exists()) {
             defaultVideoFile.renameTo(mVideoFile);
         }
+        // ------------------- AMAZON S3 UPLOAD -------------------
+        TransferController.upload(getActivity(), Uri.fromFile(mVideoFile));
+        // ------------------- AMAZON S3 UPLOAD -------------------
         startPreview();
     }
     /**
@@ -843,5 +852,10 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
         }
     }
     // ------------------- FILE WRITING METHODS -------------------
+
+    // ------------------- AMAZON S3 UPLOAD -------------------
+
+
+    // ------------------- AMAZON S3 UPLOAD -------------------
 
 }
