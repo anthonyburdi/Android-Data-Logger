@@ -13,9 +13,14 @@
  * permissions and limitations under the License.
  */
 
-package com.amazonaws.demo.s3_transfer_manager;
+package com.example.android.camera2video;
 
-public class Constants {
+// You should rename this file to Constants.java and the class to Constants
+// This file should only live on your machine since it contains sensitive
+// authentication information. The Constants.java file is part of .gitignore and will not be
+// included when making commits
+
+public class ConstantsExample {
     // You should replace these values with your own
     // See the readme for details on what to fill in
     public static final String AWS_ACCOUNT_ID = "YOUR_ACCOUNT_ID";
