@@ -146,14 +146,13 @@ public class UploadModel extends TransferModel {
                 // TODO change the below to remove the extension & test
                 mUpload = getTransferManager().upload(
                         Constants.BUCKET_NAME.toLowerCase(Locale.US),
-                        Util.getPrefix(getContext()) + super.getFileName() + "."
-                                + mExtension,
+                        Util.getPrefix(getContext()) + super.getFileName(),// + "."
+                                //+ mExtension,
                         mFile);
                 // TODO remove the below
                 // Added to check upload state for debugging:
                 Log.d("UploadModel.upload()", "This is the file getting uploaded: "
-                        + Util.getPrefix(getContext()) + super.getFileName() + "."
-                        + mExtension);
+                        + Util.getPrefix(getContext()) + super.getFileName());
                 if (mUpload.isDone() == false) {
                     System.out.println("Transfer: " + mUpload.getDescription());
                     System.out.println("  - State: " + mUpload.getState());
@@ -172,6 +171,7 @@ public class UploadModel extends TransferModel {
         InputStream in = null;
         FileOutputStream out = null;
 
+        // TODO Check here if extension needs to be removed.
         try {
             in = resolver.openInputStream(getUri());
             mFile = File.createTempFile(
