@@ -376,6 +376,11 @@ public class Camera2VideoFragment extends Fragment implements View.OnClickListen
                     // ------------------- AMAZON S3 UPLOAD -------------------
                     TransferController.upload(getActivity(), Uri.fromFile(mAccelFile));
                     TransferController.upload(getActivity(), Uri.fromFile(mLocFile));
+                    // TODO is this necessary?
+//                    DefaultAWSCredentialsProviderChain credentialsProviderChain = new DefaultAWSCredentialsProviderChain();
+//                    TransferManager tx = new TransferManager(credentialsProviderChain.getCredentials());
+//                    Upload myUpload = tx.upload(Constants.BUCKET_NAME, mAccelFile.getName(), mAccelFile);
+//                    TransferController.upload(getActivity(), myUpload);
                     // ------------------- AMAZON S3 UPLOAD -------------------
                     stopRecordingVideo();
                 } else {

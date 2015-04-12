@@ -136,17 +136,30 @@ public class UploadModel extends TransferModel {
         }
     }
 
+    // TODO review this code for issues:
     public void upload() {
         if (mFile == null) {
             saveTempFile();
         }
         if (mFile != null) {
             try {
+                // TODO change the below to remove the extension & test
                 mUpload = getTransferManager().upload(
                         Constants.BUCKET_NAME.toLowerCase(Locale.US),
                         Util.getPrefix(getContext()) + super.getFileName() + "."
                                 + mExtension,
                         mFile);
+                // TODO remove the below
+                // Added to check upload state for debugging:
+                Log.d("UploadModel.upload()", "This is the file getting uploaded: "
+                        + Util.getPrefix(getContext()) + super.getFileName() + "."
+                        + mExtension);
+                if (mUpload.isDone() == false) {
+                    System.out.println("Transfer: " + mUpload.getDescription());
+                    System.out.println("  - State: " + mUpload.getState());
+                    System.out.println("  - Progress: "
+                            + mUpload.getProgress().getBytesTransferred());
+                }
                 mUpload.addProgressListener(mListener);
             } catch (Exception e) {
                 Log.e(TAG, "", e);

@@ -46,10 +46,11 @@
         </activity>
 
         <!--TODO is this req'd if not downloading?-->
+        <!--TODO how to get this code to work? Causing errors when un-commented-->
         <!--Added for AWS S3 storage of files-->
         <!--<activity android:name="DownloadActivity"/>-->
-        <!--<service android:name=".com.example.android.camera2video.network.NetworkService"-->
-            <!--android:exported="false"/>-->
+        <service android:name="com.example.android.camera2video.network.NetworkService"
+            android:exported="false"/>
 
     </application>
 
