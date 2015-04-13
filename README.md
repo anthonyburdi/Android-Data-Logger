@@ -1,13 +1,17 @@
 # Android-Data-Logger
 ===================================
 
-Based on Android Camera2Video Sample
-
 Introduction
 ------------
 
 Record video and log location and accelerometer data to file.
-TODO: Add logging of location and accelerometer data.
+TODO: 
+- Add more threading to move long-running tasks off main thread
+- Enhance user interface including upload notifications
+- Modularize code
+- Clean up cruft from demo code
+
+Based on Android Camera2Video Sample, location and accelerometer samples. Also Amazon S3 sample.
 
 Pre-requisites
 --------------
@@ -22,7 +26,7 @@ Getting Started
 This sample uses the Gradle build system. To build this project, use the
 "gradlew build" command or use "Import Project" in Android Studio.
 
-Use Android File Transfer to view files.
+Use Android File Transfer to view files on your device.
 
 License
 -------
