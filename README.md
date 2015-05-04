@@ -1,10 +1,9 @@
 # Android-Data-Logger
-===================================
 
 Introduction
 ------------
 
-Record video and log location and accelerometer data to file.
+Record video and log location and accelerometer data to file.  
 TODO: 
 - Add more threading to move long-running tasks off main thread
 - Enhance user interface including upload notifications
@@ -31,9 +30,9 @@ Use Android File Transfer to view files on your device.
 License
 -------
 
-Copyright 2014 The Android Open Source Project, Inc.
+Some of the code is Copyright 2014 The Android Open Source Project, Inc.
 
-Licensed to the Apache Software Foundation (ASF) under one or more contributor
+All of the code is Licensed to the Apache Software Foundation (ASF) under one or more contributor
 license agreements.  See the NOTICE file distributed with this work for
 additional information regarding copyright ownership.  The ASF licenses this
 file to you under the Apache License, Version 2.0 (the "License"); you may not
